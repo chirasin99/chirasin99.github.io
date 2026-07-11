@@ -31,6 +31,22 @@
     <meta name="twitter:title" content="CHIRASIN MARKET - ลงประกาศขายสินค้าและบริการฟรี">
     <meta name="twitter:description" content="ลงประกาศซื้อขายสินค้าและบริการฟรี ไม่ต้องสมัครสมาชิก ค้นหาสินค้าที่คุณต้องการได้ที่นี่">
     <meta name="twitter:image" content="https://chirasin99.github.io/cover.jpg">
+
+    <!-- 🏷️ Schema.org: บอก Google ว่านี่คือเว็บตลาดซื้อขายสินค้า/บริการชื่ออะไร -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org/",
+      "@type": "WebSite",
+      "name": "CHIRASIN MARKET",
+      "url": "https://chirasin99.github.io/",
+      "description": "แพลตฟอร์มลงประกาศซื้อขายสินค้าและบริการฟรี ไม่ต้องสมัครสมาชิก",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://chirasin99.github.io/?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
     <style>
         * { box-sizing: border-box; font-family: 'Tahoma', 'Sarabun', sans-serif; }
         body { background-color: #0f172a; margin: 0; padding: 0; color: #f8fafc; }
@@ -161,6 +177,13 @@
         .yt-embed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
         .yt-embed-grid iframe { width: 100%; height: 180px; border-radius: 10px; border: none; }
         .breadcrumb { font-size: 12px; color: #64748b; margin-bottom: 10px; }
+        .share-bar { display: flex; align-items: center; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+        .share-bar .share-label { font-size: 12px; color: #94a3b8; font-weight: 700; margin-right: 2px; }
+        .share-btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 9999px; border: none; font-size: 12px; font-weight: 700; cursor: pointer; color: white; }
+        .share-btn.fb { background: #1877F2; }
+        .share-btn.line { background: #06C755; }
+        .share-btn.copy { background: #334155; }
+        .share-btn:hover { filter: brightness(1.1); }
         .manage-bar { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
         .manage-bar button { flex: 1; min-width: 90px; height: 40px; border-radius: 10px; border: none; font-size: 12px; font-weight: 700; cursor: pointer; }
         .btn-manage-promote { background:#FF6B35; color:white; }
@@ -244,6 +267,7 @@
                 <div class="keyword-wrap" id="detailKeywords"></div>
                 <p style="color:#94a3b8; font-size:13px; margin-top:14px;" id="detailContact"></p>
                 <div class="yt-embed-grid" id="detailYoutube"></div>
+                <div class="share-bar" id="detailShareBar"></div>
                 <div class="manage-bar" id="detailManageBar"></div>
             </div>
         </div>
@@ -1153,8 +1177,85 @@
                 ytWrap.appendChild(iframe);
             });
 
+            renderShareBar(ad);
+            injectAdSchema(ad);
             await renderManageBar(ad);
             handleStepSwitch('detail');
+
+            // อัพเดต URL ให้มี ?view=ad_id เพื่อให้แชร์ลิงก์นี้แล้วเปิดตรงไปยังประกาศนี้ได้เลย (ไม่รีโหลดหน้า)
+            try {
+                var newUrl = window.location.pathname + '?view=' + encodeURIComponent(ad.id);
+                window.history.replaceState({}, '', newUrl);
+            } catch (e) {}
+        }
+
+        // 🔗 สร้างแถบปุ่มแชร์ (Facebook / LINE / คัดลอกลิงก์) สำหรับประกาศที่กำลังดูอยู่
+        function renderShareBar(ad) {
+            var bar = document.getElementById('detailShareBar');
+            if (!bar) return;
+            var shareUrl = window.location.origin + window.location.pathname + '?view=' + encodeURIComponent(ad.id);
+            var shareText = ad.title + (ad.price ? ' ฿' + ad.price : '') + ' - CHIRASIN MARKET';
+            bar.innerHTML =
+                '<span class="share-label">📤 แชร์ประกาศนี้:</span>' +
+                '<button type="button" class="share-btn fb" onclick="shareToFacebook(\'' + shareUrl.replace(/'/g, "%27") + '\')">Facebook</button>' +
+                '<button type="button" class="share-btn line" onclick="shareToLine(\'' + shareUrl.replace(/'/g, "%27") + '\', \'' + shareText.replace(/'/g, "\\'") + '\')">LINE</button>' +
+                '<button type="button" class="share-btn copy" onclick="copyShareLink(\'' + shareUrl.replace(/'/g, "%27") + '\', this)">🔗 คัดลอกลิงก์</button>';
+        }
+
+        function shareToFacebook(url) {
+            window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url), '_blank', 'width=600,height=500');
+        }
+
+        function shareToLine(url, text) {
+            window.open('https://social-plugins.line.me/lineit/share?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text), '_blank', 'width=500,height=600');
+        }
+
+        function copyShareLink(url, btnEl) {
+            var done = function () {
+                if (!btnEl) return;
+                var original = btnEl.innerText;
+                btnEl.innerText = '✅ คัดลอกแล้ว';
+                setTimeout(function () { btnEl.innerText = original; }, 1800);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(done).catch(function () { promptCopyFallback(url); });
+            } else {
+                promptCopyFallback(url);
+            }
+        }
+
+        function promptCopyFallback(url) {
+            window.prompt('คัดลอกลิงก์นี้ (Ctrl+C แล้ว Enter):', url);
+        }
+
+        // 🏷️ ฝัง Schema.org (JSON-LD) ให้ Google เข้าใจว่าหน้านี้คือประกาศขายสินค้า/บริการ
+        // ช่วยเรื่อง SEO — Googlebot อ่าน JavaScript ได้จึงจะเห็นข้อมูลนี้ตอน index หน้า (ต่างจาก Facebook ที่ไม่รันสคริปต์)
+        function injectAdSchema(ad) {
+            var existing = document.getElementById('adSchemaLd');
+            if (existing) existing.remove();
+
+            var images = (ad.images || []).map(function (im) { return im.src; }).filter(Boolean).slice(0, 5);
+            var schema = {
+                "@context": "https://schema.org/",
+                "@type": "Product",
+                "name": ad.title,
+                "description": ad.desc || ad.title,
+                "image": images.length ? images : undefined,
+                "offers": {
+                    "@type": "Offer",
+                    "price": (ad.price || '0').toString().replace(/[^0-9.]/g, '') || "0",
+                    "priceCurrency": "THB",
+                    "availability": "https://schema.org/InStock",
+                    "areaServed": ad.province || undefined
+                },
+                "brand": { "@type": "Organization", "name": "CHIRASIN MARKET" }
+            };
+
+            var script = document.createElement('script');
+            script.type = 'application/ld+json';
+            script.id = 'adSchemaLd';
+            script.text = JSON.stringify(schema);
+            document.head.appendChild(script);
         }
 
         function renderDetailImages(ad) {
@@ -1447,6 +1548,12 @@
         }
 
         initSelects();
+
+        // 🔗 ถ้ามีคนเปิดลิงก์ที่แชร์มาแบบ ?view=ad_id ให้พาไปหน้ารายละเอียดประกาศนั้นทันที
+        (function checkDeepLinkView() {
+            var viewId = new URLSearchParams(window.location.search).get('view');
+            if (viewId) openDetail(viewId);
+        })();
     </script>
 </body>
 </html>
