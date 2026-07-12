@@ -1081,13 +1081,19 @@
             try {
                 var listResult = await chirasinDB.list('ads:', true);
                 var keys = (listResult && listResult.keys) || [];
+                // 🚀 ดึงข้อมูลทุกประกาศ "พร้อมกัน" ทีเดียว (แทนการดึงทีละอันตามลำดับ) ทำให้โหลดเร็วขึ้นมาก
+                var results = await Promise.all(keys.map(function (key) {
+                    return chirasinDB.get(key, true).catch(function (innerErr) {
+                        console.error('อ่านประกาศ ' + key + ' ไม่สำเร็จ:', innerErr);
+                        return null;
+                    });
+                }));
                 var ads = [];
-                for (var i = 0; i < keys.length; i++) {
-                    try {
-                        var item = await chirasinDB.get(keys[i], true);
-                        if (item && item.value) ads.push(JSON.parse(item.value));
-                    } catch (innerErr) { console.error('อ่านประกาศ ' + keys[i] + ' ไม่สำเร็จ:', innerErr); }
-                }
+                results.forEach(function (item) {
+                    if (item && item.value) {
+                        try { ads.push(JSON.parse(item.value)); } catch (parseErr) { console.error('แปลงข้อมูลประกาศไม่สำเร็จ:', parseErr); }
+                    }
+                });
                 adsData = ads;
                 renderAdsBoard();
             } catch (err) {
