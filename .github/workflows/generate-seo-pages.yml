@@ -1,0 +1,47 @@
+name: สร้างหน้า SEO และ sitemap อัตโนมัติ
+
+on:
+  schedule:
+    # รันทุกวัน ตี 20:00 น. เวลาไทย (13:00 UTC) — แก้เวลาได้ตามต้องการ (เวลาในไฟล์นี้เป็น UTC เสมอ)
+    - cron: '0 13 * * *'
+  workflow_dispatch: {}   # ปุ่มกดรันเองได้จากแท็บ Actions บน GitHub
+
+# ต้องให้สิทธิ์เขียนกลับเข้า repo เพื่อ commit ไฟล์ที่สร้างขึ้นมาใหม่
+permissions:
+  contents: write
+
+jobs:
+  build-seo-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: ติดตั้ง dependencies
+        run: npm install
+        # ถ้าต้องการเปลี่ยนค่า Firebase config โดยไม่แก้โค้ด ให้ตั้งค่า Secrets ใน repo
+        # (Settings > Secrets and variables > Actions) แล้ว uncomment ส่วนนี้:
+        # env:
+        #   FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+        #   FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+        #   FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+
+      - name: สร้างหน้าประกาศ + sitemap.xml
+        run: node scripts/generate-static-pages.js
+
+      - name: Commit และ push ไฟล์ที่สร้างใหม่ (ถ้ามีการเปลี่ยนแปลง)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ad/ sitemap.xml
+          if git diff --cached --quiet; then
+            echo "ไม่มีอะไรเปลี่ยนแปลง ข้ามการ commit"
+          else
+            git commit -m "🤖 อัปเดตหน้า SEO และ sitemap อัตโนมัติ"
+            git push
+          fi
