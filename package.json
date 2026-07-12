@@ -1,1 +1,11 @@
-
+{
+  "name": "chirasin-market-seo",
+  "private": true,
+  "description": "สคริปต์เสริมสำหรับสร้างหน้า SEO/sitemap.xml ให้เว็บ CHIRASIN MARKET อัตโนมัติผ่าน GitHub Actions",
+  "scripts": {
+    "generate-seo": "node scripts/generate-static-pages.js"
+  },
+  "dependencies": {
+    "firebase": "^10.12.0"
+  }
+}
